@@ -1,0 +1,3098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Carrom Pool Royal - 2D HTML5 Canvas Edition</title>
+<style>
+  :root {
+    --bg-deep: #09051d;
+    --bg-mid: #1a0f45;
+    --bg-light: #2d196b;
+    --gold-light: #ffe875;
+    --gold-mid: #f5b916;
+    --gold-dark: #9c6700;
+    --panel-bg: rgba(18, 11, 48, 0.88);
+    --text-light: #ffffff;
+    --accent-green: #00e676;
+    --accent-red: #ff3d57;
+    --accent-cyan: #00e5ff;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 25%, var(--bg-light) 0%, var(--bg-mid) 48%, var(--bg-deep) 100%);
+    color: var(--text-light);
+    touch-action: none;
+  }
+
+  /* Subtle Royal Pattern Overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(255, 215, 0, 0.06) 1px, transparent 1px),
+      radial-gradient(rgba(255, 215, 0, 0.04) 1px, transparent 1px);
+    background-size: 36px 36px;
+    background-position: 0 0, 18px 18px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 540px;
+    height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px 12px 10px;
+  }
+
+  .screen.active {
+    display: flex;
+  }
+
+  /* ================= LOBBY TOP BAR ================= */
+  .lobby-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #27175c 0%, #140b36 100%);
+    border: 2px solid var(--gold-mid);
+    border-radius: 16px;
+    padding: 6px 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.25);
+  }
+
+  .profile-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .avatar-box {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #ff9800, #e65100);
+    border: 2px solid var(--gold-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .level-badge {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: linear-gradient(180deg, #00e5ff, #0077c2);
+    border: 1.5px solid #fff;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 5px;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .player-meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .player-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: 0.3px;
+  }
+
+  .xp-bar {
+    width: 68px;
+    height: 6px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 4px;
+    margin-top: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(255,215,0,0.35);
+  }
+
+  .xp-fill {
+    width: 74%;
+    height: 100%;
+    background: linear-gradient(90deg, #00e676, #b2ff59);
+  }
+
+  .currency-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .currency-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(8, 4, 24, 0.8);
+    border: 1.5px solid rgba(255, 215, 0, 0.55);
+    border-radius: 20px;
+    padding: 4px 10px 4px 6px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .coin-icon, .gem-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .coin-icon {
+    background: radial-gradient(circle at 30% 30%, #fff59d, #f5b916 65%, #9c6700);
+    color: #5d3a00;
+    border: 1px solid #ffe875;
+  }
+
+  .gem-icon {
+    background: radial-gradient(circle at 30% 30%, #ff80ab, #f50057 65%, #880e4f);
+    color: #fff;
+    border: 1px solid #ff80ab;
+    border-radius: 4px;
+    transform: rotate(45deg);
+  }
+  .gem-icon span { transform: rotate(-45deg); }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 2px solid var(--gold-mid);
+    background: linear-gradient(180deg, #392382 0%, #1e114a 100%);
+    color: var(--gold-light);
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.45);
+    transition: transform 0.1s;
+  }
+
+  .icon-btn:active {
+    transform: scale(0.93);
+  }
+
+  /* ================= LOBBY HERO & MODE CARDS ================= */
+  .lobby-title-banner {
+    text-align: center;
+    margin: 2px 0;
+  }
+
+  .game-logo {
+    font-size: clamp(22px, 5.5vw, 30px);
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #fff9c4 0%, #ffd54f 45%, #ff8f00 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.75));
+  }
+
+  .game-subtitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #b39ddb;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: auto 0;
+  }
+
+  .mode-card {
+    position: relative;
+    border-radius: 16px;
+    padding: 12px 10px;
+    border: 2.5px solid var(--gold-light);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 118px;
+    box-shadow:
+      0 8px 18px rgba(0,0,0,0.6),
+      inset 0 2px 2px rgba(255,255,255,0.45),
+      inset 0 -4px 8px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+
+  .mode-card:hover {
+    filter: brightness(1.07);
+  }
+
+  .mode-card:active {
+    transform: translateY(3px) scale(0.98);
+  }
+
+  .mode-card.disc {
+    background: linear-gradient(145deg, #00b0ff 0%, #005cb2 55%, #002f6c 100%);
+  }
+  .mode-card.classic {
+    background: linear-gradient(145deg, #00e676 0%, #008e46 55%, #004d25 100%);
+  }
+  .mode-card.freestyle {
+    background: linear-gradient(145deg, #ff9100 0%, #d84315 55%, #6d1b07 100%);
+  }
+  .mode-card.twoplayer {
+    background: linear-gradient(145deg, #d500f9 0%, #7b1fa2 55%, #38006b 100%);
+  }
+
+  .mode-card::after {
+    content: "";
+    position: absolute;
+    top: -40%;
+    left: -20%;
+    width: 140%;
+    height: 75%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%);
+    transform: rotate(-12deg);
+    pointer-events: none;
+  }
+
+  .mode-badge {
+    align-self: flex-start;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: var(--gold-light);
+  }
+
+  .mode-title {
+    font-size: 17px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.75);
+    margin-top: 6px;
+  }
+
+  .mode-desc {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.25;
+    margin-top: 2px;
+  }
+
+  .mode-prize {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    background: rgba(0,0,0,0.4);
+    padding: 3px 8px;
+    border-radius: 12px;
+    align-self: flex-start;
+    color: var(--gold-light);
+  }
+
+  /* ================= LOBBY STRIKER & BOARD PREVIEW ================= */
+  .lobby-preview-Dock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(35, 21, 82, 0.92) 0%, rgba(15, 8, 38, 0.96) 100%);
+    border: 2px solid var(--gold-mid);
+    border-radius: 16px;
+    padding: 8px 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+    gap: 10px;
+  }
+
+  .preview-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #lobbyPreviewCanvas {
+    width: 68px;
+    height: 68px;
+    border-radius: 12px;
+    background: radial-gradient(circle, #2a185c, #0f0826);
+    border: 1.5px solid var(--gold-light);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+  }
+
+  .preview-info h4 {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--gold-light);
+  }
+
+  .preview-info p {
+    font-size: 11px;
+    color: #d1c4e9;
+    margin-top: 2px;
+  }
+
+  .stat-bars {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .stat-track {
+    width: 65px;
+    height: 5px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-mid), var(--accent-cyan));
+  }
+
+  .striker-switch-btn {
+    background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 60%, var(--gold-dark) 100%);
+    color: #2b1600;
+    font-weight: 900;
+    font-size: 11px;
+    padding: 8px 11px;
+    border-radius: 11px;
+    border: 1.5px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+
+  .striker-switch-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* ================= GAMEPLAY SCREEN HUD ================= */
+  .hud-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .player-hud-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(180deg, #251557 0%, #120930 100%);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 14px;
+    padding: 5px 8px;
+    position: relative;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    min-width: 0;
+  }
+
+  .player-hud-card.right {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .player-hud-card.active-turn {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 14px rgba(0, 230, 118, 0.45);
+  }
+
+  .avatar-ring-wrap {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .timer-ring-canvas {
+    position: absolute;
+    inset: -3px;
+    width: 50px;
+    height: 50px;
+    pointer-events: none;
+  }
+
+  .hud-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #2979ff, #0d47a1);
+    border: 1.5px solid rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+  }
+
+  .player-hud-card.right .hud-avatar {
+    background: linear-gradient(135deg, #ff1744, #880e4f);
+  }
+
+  .hud-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hud-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .player-hud-card.right .hud-name-row {
+    flex-direction: row-reverse;
+  }
+
+  .hud-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hud-score-pill {
+    font-size: 11px;
+    font-weight: 900;
+    background: rgba(0,0,0,0.55);
+    color: var(--gold-light);
+    padding: 1px 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,215,0,0.45);
+  }
+
+  .puck-mini-tray {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 16px;
+    background: rgba(5, 2, 16, 0.72);
+    border-radius: 8px;
+    padding: 2px 5px;
+    overflow: hidden;
+  }
+
+  .player-hud-card.right .puck-mini-tray {
+    flex-direction: row-reverse;
+  }
+
+  .tray-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: -2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  .tray-dot:first-child { margin-left: 0; }
+  .tray-dot.white {
+    background: radial-gradient(circle at 35% 35%, #ffffff, #d7ccc8);
+    border: 1px solid #8d6e63;
+  }
+  .tray-dot.black {
+    background: radial-gradient(circle at 35% 35%, #616161, #121212);
+    border: 1px solid #9e9e9e;
+  }
+  .tray-dot.queen {
+    background: radial-gradient(circle at 35% 35%, #ff5252, #b71c1c);
+    border: 1px solid #ffd700;
+  }
+
+  .hud-center-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .mode-pill-center {
+    font-size: 9px;
+    font-weight: 900;
+    color: var(--gold-light);
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,215,0,0.4);
+    padding: 2px 7px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .hud-btn-row {
+    display: flex;
+    gap: 4px;
+  }
+
+  .mini-icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1.5px solid var(--gold-mid);
+    background: linear-gradient(180deg, #351f78, #1a0d42);
+    color: var(--gold-light);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ================= STATUS BANNER (QUEEN COVER / FOUL) ================= */
+  .match-status-strip {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.18), transparent);
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* ================= BOARD CONTAINER ================= */
+  .board-stage {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    width: min(100%, 66dvh);
+    aspect-ratio: 1 / 1;
+    border-radius: 26px;
+    box-shadow:
+      0 16px 36px rgba(0,0,0,0.85),
+      0 0 0 3px var(--gold-mid),
+      0 0 22px rgba(255, 193, 7, 0.25);
+    overflow: hidden;
+  }
+
+  #boardCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+  }
+  #boardCanvas:active {
+    cursor: grabbing;
+  }
+
+  /* ================= BOTTOM STRIKER SLIDER BAR ================= */
+  .slider-dock {
+    width: 100%;
+    background: linear-gradient(180deg, #261557 0%, #12082e 100%);
+    border: 2px solid var(--gold-mid);
+    border-radius: 16px;
+    padding: 7px 14px 9px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .slider-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+
+  .overlap-badge {
+    color: var(--accent-red);
+    font-weight: 900;
+    display: none;
+    animation: blinkRed 0.5s infinite alternate;
+  }
+
+  @keyframes blinkRed {
+    from { opacity: 0.35; }
+    to { opacity: 1; }
+  }
+
+  .slider-track-container {
+    position: relative;
+    width: 100%;
+    height: 32px;
+    background: linear-gradient(180deg, #0b051c 0%, #1d1042 100%);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 215, 0, 0.55);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.85);
+  }
+
+  .slider-groove {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255, 215, 0, 0.45) 0px,
+      rgba(255, 215, 0, 0.45) 6px,
+      rgba(255, 255, 255, 0.1) 6px,
+      rgba(255, 255, 255, 0.1) 12px
+    );
+  }
+
+  #strikerRange {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+    z-index: 3;
+  }
+
+  .slider-thumb-visual {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff9c4, #ffd700 55%, #b26a00 95%);
+    border: 2.5px solid #ffffff;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.9), 0 3px 6px rgba(0,0,0,0.7);
+    pointer-events: none;
+    z-index: 2;
+    transition: background 0.15s;
+  }
+
+  .slider-thumb-visual.overlap {
+    background: radial-gradient(circle at 35% 35%, #ff8a80, #ff1744 60%, #880e4f 95%);
+    box-shadow: 0 0 14px rgba(255, 23, 68, 0.95);
+  }
+
+  /* ================= VICTORY MODAL ================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 3, 18, 0.85);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 51;
+  }
+
+  .victory-card {
+    position: relative;
+    z-index: 52;
+    width: 100%;
+    max-width: 360px;
+    background: linear-gradient(180deg, #2d196b 0%, #140a35 100%);
+    border: 3px solid var(--gold-light);
+    border-radius: 22px;
+    padding: 20px 18px;
+    text-align: center;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.9), 0 0 28px rgba(255, 215, 0, 0.35);
+  }
+
+  .trophy-badge {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffe57f 0%, #ff8f00 75%);
+    border: 3px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+  }
+
+  .victory-title {
+    font-size: 25px;
+    font-weight: 900;
+    background: linear-gradient(180deg, #ffffff, #ffd54f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+  }
+
+  .victory-sub {
+    font-size: 13px;
+    color: #d1c4e9;
+    font-weight: 700;
+    margin-top: 3px;
+  }
+
+  .reward-box {
+    margin: 14px 0;
+    background: rgba(0,0,0,0.45);
+    border: 1.5px solid rgba(255,215,0,0.45);
+    border-radius: 14px;
+    padding: 10px;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .reward-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .reward-label {
+    font-size: 10px;
+    color: #b39ddb;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .reward-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--gold-light);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .action-btn {
+    flex: 1;
+    padding: 11px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    border: 2px solid #fff;
+    text-transform: uppercase;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.5);
+  }
+
+  .action-btn.rematch {
+    background: linear-gradient(180deg, #00e676 0%, #008e46 100%);
+    color: #fff;
+  }
+
+  .action-btn.home {
+    background: linear-gradient(180deg, #ffd54f 0%, #ff8f00 100%);
+    color: #2c1500;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ==================== HOME / LOBBY SCREEN ==================== -->
+  <div id="lobbyScreen" class="screen active">
+    <div class="lobby-top-bar">
+      <div class="profile-pill">
+        <div class="avatar-box">
+          <span style="font-size:20px;">👑</span>
+          <span class="level-badge">Lv.24</span>
+        </div>
+        <div class="player-meta">
+          <span class="player-name">You (Grandmaster)</span>
+          <div class="xp-bar"><div class="xp-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="currency-group">
+        <div class="currency-pill">
+          <span class="coin-icon">C</span>
+          <span id="coinCountText">25,400</span>
+        </div>
+        <div class="currency-pill">
+          <span class="gem-icon"><span>♦</span></span>
+          <span id="gemCountText">480</span>
+        </div>
+        <button id="lobbySoundBtn" class="icon-btn" title="Toggle Sound">🔊</button>
+      </div>
+    </div>
+
+    <div class="lobby-title-banner">
+      <div class="game-logo">Carrom Pool Royal</div>
+      <div class="game-subtitle">Pro Physics &bull; Official Rules</div>
+    </div>
+
+    <div class="mode-grid">
+      <div class="mode-card disc" data-mode="DISC">
+        <span class="mode-badge">Fast Pace</span>
+        <div>
+          <div class="mode-title">Play Disc Pool</div>
+          <div class="mode-desc">No Queen! Pocket all 9 of your pucks first to win.</div>
+        </div>
+        <div class="mode-prize"><span class="coin-icon">C</span> 1,000 Prize</div>
+      </div>
+
+      <div class="mode-card classic" data-mode="CLASSIC">
+        <span class="mode-badge">Official Rules</span>
+        <div>
+          <div class="mode-title">Play Classic</div>
+          <div class="mode-desc">9 Pucks + Red Queen with mandatory cover shot.</div>
+        </div>
+        <div class="mode-prize"><span class="coin-icon">C</span> 2,500 Prize</div>
+      </div>
+
+      <div class="mode-card freestyle" data-mode="FREESTYLE">
+        <span class="mode-badge">120 Pts Race</span>
+        <div>
+          <div class="mode-title">Freestyle</div>
+          <div class="mode-desc">White +20, Black +10, Queen +50. First to 120 pts!</div>
+        </div>
+        <div class="mode-prize"><span class="coin-icon">C</span> 2,000 Prize</div>
+      </div>
+
+      <div class="mode-card twoplayer" data-mode="PASS_PLAY">
+        <span class="mode-badge">Local PvP</span>
+        <div>
+          <div class="mode-title">2 Player</div>
+          <div class="mode-desc">Pass &amp; Play on same device with Classic Queen rules.</div>
+        </div>
+        <div class="mode-prize">👥 Pass &amp; Play</div>
+      </div>
+    </div>
+
+    <div class="lobby-preview-Dock">
+      <div class="preview-left">
+        <canvas id="lobbyPreviewCanvas" width="136" height="136"></canvas>
+        <div class="preview-info">
+          <h4 id="strikerNameText">Neon Royal Gold Striker</h4>
+          <p>Equipped &bull; Sheesham Royal Board</p>
+          <div class="stat-bars">
+            <div class="stat-row">
+              <span>FORCE</span>
+              <div class="stat-track"><div class="stat-fill" style="width:92%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span>AIM</span>
+              <div class="stat-track"><div class="stat-fill" style="width:88%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button id="switchStrikerBtn" class="striker-switch-btn">⚡ Style</button>
+    </div>
+  </div>
+
+  <!-- ==================== GAMEPLAY SCREEN ==================== -->
+  <div id="gameScreen" class="screen">
+    <div class="hud-top">
+      <!-- Player 1 Card -->
+      <div id="hudCardP1" class="player-hud-card active-turn">
+        <div class="avatar-ring-wrap">
+          <canvas id="timerRingP1" class="timer-ring-canvas" width="100" height="100"></canvas>
+          <div class="hud-avatar">👑</div>
+        </div>
+        <div class="hud-details">
+          <div class="hud-name-row">
+            <span id="hudNameP1" class="hud-name">You (White)</span>
+            <span id="hudScoreP1" class="hud-score-pill">0/9</span>
+          </div>
+          <div id="trayP1" class="puck-mini-tray"></div>
+        </div>
+      </div>
+
+      <!-- Center Mini Controls -->
+      <div class="hud-center-controls">
+        <span id="hudModeLabel" class="mode-pill-center">CLASSIC</span>
+        <div class="hud-btn-row">
+          <button id="gameSoundBtn" class="mini-icon-btn" title="Mute/Unmute">🔊</button>
+          <button id="gameHomeBtn" class="mini-icon-btn" title="Back to Lobby">🏠</button>
+        </div>
+      </div>
+
+      <!-- Player 2 / AI Card -->
+      <div id="hudCardP2" class="player-hud-card right">
+        <div class="avatar-ring-wrap">
+          <canvas id="timerRingP2" class="timer-ring-canvas" width="100" height="100"></canvas>
+          <div id="hudAvatarP2" class="hud-avatar">🤖</div>
+        </div>
+        <div class="hud-details">
+          <div class="hud-name-row">
+            <span id="hudNameP2" class="hud-name">AI Master</span>
+            <span id="hudScoreP2" class="hud-score-pill">0/9</span>
+          </div>
+          <div id="trayP2" class="puck-mini-tray"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="statusStrip" class="match-status-strip">
+      Slide striker at bottom &bull; Drag on striker to aim &amp; shoot!
+    </div>
+
+    <div class="board-stage">
+      <div class="canvas-wrapper">
+        <canvas id="boardCanvas" width="640" height="640"></canvas>
+      </div>
+    </div>
+
+    <div class="slider-dock">
+      <div class="slider-label-row">
+        <span id="sliderTurnText">Position Striker</span>
+        <span id="overlapWarning" class="overlap-badge">⚠ OVERLAP - MOVE SLIDER</span>
+      </div>
+      <div class="slider-track-container">
+        <div class="slider-groove"></div>
+        <div id="sliderThumbVisual" class="slider-thumb-visual"></div>
+        <input id="strikerRange" type="range" min="0" max="1000" value="500">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VICTORY OVERLAY MODAL ==================== -->
+<div id="victoryModal" class="modal-overlay">
+  <canvas id="confettiCanvas"></canvas>
+  <div class="victory-card">
+    <div class="trophy-badge">🏆</div>
+    <div id="victoryTitle" class="victory-title">You Win!</div>
+    <div id="victorySub" class="victory-sub">Classic Carrom Match Completed</div>
+    <div class="reward-box">
+      <div class="reward-item">
+        <span class="reward-label">Match Score</span>
+        <span id="victoryScoreText" class="reward-val">9 - 4</span>
+      </div>
+      <div class="reward-item">
+        <span class="reward-label">Prize Won</span>
+        <span id="victoryCoinsText" class="reward-val">+2,500 C</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="rematchBtn" class="action-btn rematch">🔄 Rematch</button>
+      <button id="modalHomeBtn" class="action-btn home">🏠 Lobby</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* =========================================================================
+   * 1. PROCEDURAL WEB AUDIO SYNTHESIZER (Zero External Assets)
+   * ========================================================================= */
+  class SoundEngine {
+    constructor() {
+      this.ctx = null;
+      this.enabled = true;
+    }
+
+    init() {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) this.ctx = new AudioCtx();
+      }
+      if (this.ctx && this.ctx.state === "suspended") {
+        this.ctx.resume();
+      }
+    }
+
+    toggle() {
+      this.enabled = !this.enabled;
+      return this.enabled;
+    }
+
+    // Crisp wooden acrylic clack scaled by collision speed
+    playPuckHit(relSpeed) {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const gainVal = Math.min(0.95, Math.max(0.05, relSpeed / 22));
+
+      // High wood-acrylic click transient
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "triangle";
+      const baseFreq = 520 + Math.min(600, relSpeed * 28) + (Math.random() * 50 - 25);
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(165, now + 0.045);
+
+      gain.gain.setValueAtTime(gainVal * 0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+
+      // Short wooden body resonance
+      const bodyOsc = this.ctx.createOscillator();
+      const bodyGain = this.ctx.createGain();
+      bodyOsc.type = "sine";
+      bodyOsc.frequency.setValueAtTime(240, now);
+      bodyOsc.frequency.exponentialRampToValueAtTime(110, now + 0.065);
+      bodyGain.gain.setValueAtTime(gainVal * 0.45, now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+      bodyOsc.connect(bodyGain);
+      bodyGain.connect(this.ctx.destination);
+      bodyOsc.start(now);
+      bodyOsc.stop(now + 0.075);
+    }
+
+    // Deep wooden frame cushion thud
+    playCushionThud(speed) {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const vol = Math.min(0.75, Math.max(0.06, speed / 24));
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(145, now);
+      osc.frequency.exponentialRampToValueAtTime(52, now + 0.085);
+
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.095);
+    }
+
+    // Pocket drop rattle + chime
+    playPocketDrop(isQueen = false, isFoul = false) {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      if (isFoul) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.linearRampToValueAtTime(95, now + 0.32);
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+        return;
+      }
+
+      const notes = isQueen ? [523.25, 659.25, 783.99, 1046.5] : [440, 587.33];
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+        gain.gain.setValueAtTime(0.28, now + idx * 0.055);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + idx * 0.055);
+        osc.stop(now + idx * 0.055 + 0.24);
+      });
+    }
+
+    playUIClick() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(680, now);
+      osc.frequency.exponentialRampToValueAtTime(340, now + 0.035);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.045);
+    }
+
+    playVictoryFanfare() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const chord = [523.25, 659.25, 783.99, 1046.5];
+      chord.forEach((f, i) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, now + i * 0.09);
+        gain.gain.setValueAtTime(0.25, now + i * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.55);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + i * 0.09);
+        osc.stop(now + i * 0.09 + 0.58);
+      });
+    }
+  }
+
+  const sound = new SoundEngine();
+
+  /* =========================================================================
+   * 2. BOARD CONSTANTS & GEOMETRY (640x640 Virtual Coordinate Space)
+   * ========================================================================= */
+  const BOARD_SIZE = 640;
+  const FRAME_WIDTH = 44;
+  const PLAY_MIN = FRAME_WIDTH;
+  const PLAY_MAX = BOARD_SIZE - FRAME_WIDTH;
+  const CENTER = BOARD_SIZE / 2;
+
+  const POCKET_OFFSET = FRAME_WIDTH + 22;
+  const POCKET_RADIUS = 24.5;
+  const POCKET_GRAVITY_RADIUS = 33.0;
+  const PUCK_RADIUS = 16.0;
+  const STRIKER_RADIUS = 20.6;
+
+  // Baselines (Top = AI/P2, Bottom = Player 1)
+  const BASELINE_BOTTOM_Y = BOARD_SIZE - FRAME_WIDTH - 62;
+  const BASELINE_TOP_Y = FRAME_WIDTH + 62;
+  const BASELINE_X_MIN = FRAME_WIDTH + 86;
+  const BASELINE_X_MAX = BOARD_SIZE - FRAME_WIDTH - 86;
+  const BASELINE_HALF_THICK = 13;
+
+  const POCKETS = [
+    { x: POCKET_OFFSET, y: POCKET_OFFSET },
+    { x: BOARD_SIZE - POCKET_OFFSET, y: POCKET_OFFSET },
+    { x: POCKET_OFFSET, y: BOARD_SIZE - POCKET_OFFSET },
+    { x: BOARD_SIZE - POCKET_OFFSET, y: BOARD_SIZE - POCKET_OFFSET }
+  ];
+
+  // Striker cosmetic themes
+  const STRIKER_THEMES = [
+    { name: "Neon Royal Gold Striker", ring: "#ffd700", glow: "#ffea00", core: "#1e124a", accent: "#00e5ff" },
+    { name: "Emerald Cyber Striker", ring: "#00e676", glow: "#69f0ae", core: "#002916", accent: "#ffd700" },
+    { name: "Crimson Blaze Striker", ring: "#ff1744", glow: "#ff8a80", core: "#3b000e", accent: "#ffe57f" }
+  ];
+  let currentStrikerThemeIdx = 0;
+
+  /* =========================================================================
+   * 3. OFFSCREEN PROCEDURAL CARROM BOARD CACHING (60 FPS Optimization)
+   * ========================================================================= */
+  const cachedBoardCanvas = document.createElement("canvas");
+  cachedBoardCanvas.width = BOARD_SIZE;
+  cachedBoardCanvas.height = BOARD_SIZE;
+
+  function buildProceduralBoardCache() {
+    const ctx = cachedBoardCanvas.getContext("2d");
+    ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+
+    // 1. Outer Dark Rosewood/Walnut Frame
+    const frameGrad = ctx.createLinearGradient(0, 0, BOARD_SIZE, BOARD_SIZE);
+    frameGrad.addColorStop(0, "#3b1c0e");
+    frameGrad.addColorStop(0.5, "#230f06");
+    frameGrad.addColorStop(1, "#140702");
+    ctx.fillStyle = frameGrad;
+    ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+
+    // Subtle wood grain on outer frame
+    ctx.strokeStyle = "rgba(255, 195, 125, 0.04)";
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 65; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, i * 10);
+      ctx.bezierCurveTo(200, i * 10 + 14, 440, i * 10 - 14, BOARD_SIZE, i * 10);
+      ctx.stroke();
+    }
+
+    // 2. Metallic Brass Corner Brackets
+    const bracketLen = 78;
+    const corners = [
+      { x: 0, y: 0, sx: 1, sy: 1 },
+      { x: BOARD_SIZE, y: 0, sx: -1, sy: 1 },
+      { x: 0, y: BOARD_SIZE, sx: 1, sy: -1 },
+      { x: BOARD_SIZE, y: BOARD_SIZE, sx: -1, sy: -1 }
+    ];
+    corners.forEach(c => {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.scale(c.sx, c.sy);
+      const brassGrad = ctx.createLinearGradient(0, 0, bracketLen, bracketLen);
+      brassGrad.addColorStop(0, "#fff59d");
+      brassGrad.addColorStop(0.35, "#f5b916");
+      brassGrad.addColorStop(0.7, "#a67102");
+      brassGrad.addColorStop(1, "#5c3c00");
+      ctx.fillStyle = brassGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(bracketLen, 0);
+      ctx.lineTo(bracketLen - 16, 14);
+      ctx.lineTo(14, 14);
+      ctx.lineTo(14, bracketLen - 16);
+      ctx.lineTo(0, bracketLen);
+      ctx.closePath();
+      ctx.fill();
+
+      // Brass rivets
+      ctx.fillStyle = "#3e2723";
+      [[8, 8], [52, 7], [7, 52]].forEach(([rx, ry]) => {
+        ctx.beginPath();
+        ctx.arc(rx, ry, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    });
+
+    // 3. Warm Light-Oak / Sheesham Playing Surface
+    const woodGrad = ctx.createRadialGradient(CENTER, CENTER, 40, CENTER, CENTER, 400);
+    woodGrad.addColorStop(0, "#f4d7aa");
+    woodGrad.addColorStop(0.65, "#e6be86");
+    woodGrad.addColorStop(1, "#cfa063");
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(PLAY_MIN, PLAY_MIN, PLAY_MAX - PLAY_MIN, PLAY_MAX - PLAY_MIN, 18);
+    ctx.fillStyle = woodGrad;
+    ctx.fill();
+    ctx.clip();
+
+    // Procedural subtle organic wood grain fibers on playing surface
+    ctx.strokeStyle = "rgba(138, 82, 29, 0.065)";
+    ctx.lineWidth = 1.2;
+    for (let y = PLAY_MIN; y < PLAY_MAX; y += 6) {
+      ctx.beginPath();
+      ctx.moveTo(PLAY_MIN, y);
+      for (let x = PLAY_MIN; x <= PLAY_MAX; x += 40) {
+        const wave = Math.sin(x * 0.015 + y * 0.04) * 3.5;
+        ctx.lineTo(x, y + wave);
+      }
+      ctx.stroke();
+    }
+
+    // Inner Cushion Shadow Bevel
+    ctx.strokeStyle = "rgba(45, 20, 5, 0.55)";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(PLAY_MIN, PLAY_MIN, PLAY_MAX - PLAY_MIN, PLAY_MAX - PLAY_MIN);
+    ctx.restore();
+
+    // Golden Pin Border around Play Area
+    ctx.strokeStyle = "#d49b27";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(PLAY_MIN, PLAY_MIN, PLAY_MAX - PLAY_MIN, PLAY_MAX - PLAY_MIN, 18);
+    ctx.stroke();
+
+    // 4. Traditional Center Mandala Circle
+    drawCenterMandala(ctx);
+
+    // 5. Four Side Double Baselines & Red End Circles
+    drawBaselines(ctx);
+
+    // 6. Diagonal Foul Arrows
+    drawDiagonalArrows(ctx);
+
+    // 7. Four Corner Pockets with Depth Shadow & Net Rim
+    drawPockets(ctx);
+  }
+
+  function drawCenterMandala(ctx) {
+    const outerR = 56;
+    const innerR = 17.5;
+
+    ctx.save();
+    ctx.translate(CENTER, CENTER);
+
+    // Outer decorative rings
+    ctx.strokeStyle = "#5d2906";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, outerR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#b71c1c";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, outerR - 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 12-petal traditional red & gold lotus star
+    const petals = 12;
+    for (let i = 0; i < petals; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2) / petals);
+      ctx.beginPath();
+      ctx.moveTo(0, innerR);
+      ctx.quadraticCurveTo(10, (innerR + outerR) * 0.5, 0, outerR - 6);
+      ctx.quadraticCurveTo(-10, (innerR + outerR) * 0.5, 0, innerR);
+      ctx.closePath();
+      ctx.fillStyle = i % 2 === 0 ? "rgba(183, 28, 28, 0.72)" : "rgba(212, 155, 39, 0.55)";
+      ctx.fill();
+      ctx.strokeStyle = "#4e1f04";
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Center Queen Circle
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+    ctx.fillStyle = "#b71c1c";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#ffd54f";
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffd54f";
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawBaselines(ctx) {
+    // Draw for all 4 sides by rotating around center
+    for (let side = 0; side < 4; side++) {
+      ctx.save();
+      ctx.translate(CENTER, CENTER);
+      ctx.rotate(side * Math.PI * 0.5);
+      ctx.translate(-CENTER, -CENTER);
+
+      const yCenter = BASELINE_BOTTOM_Y;
+      const yTop = yCenter - BASELINE_HALF_THICK;
+      const yBot = yCenter + BASELINE_HALF_THICK;
+      const x1 = BASELINE_X_MIN;
+      const x2 = BASELINE_X_MAX;
+
+      ctx.strokeStyle = "#3e1e04";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(x1, yTop);
+      ctx.lineTo(x2, yTop);
+      ctx.moveTo(x1, yBot);
+      ctx.lineTo(x2, yBot);
+      ctx.stroke();
+
+      // End circles filled with crimson red & gold border
+      [x1, x2].forEach(cx => {
+        ctx.beginPath();
+        ctx.arc(cx, yCenter, BASELINE_HALF_THICK, 0, Math.PI * 2);
+        ctx.fillStyle = "#c62828";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#3e1e04";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, yCenter, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffd54f";
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+  }
+
+  function drawDiagonalArrows(ctx) {
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.translate(CENTER, CENTER);
+      ctx.rotate(i * Math.PI * 0.5 + Math.PI * 0.25);
+
+      const startR = 78;
+      const endR = 232;
+
+      ctx.strokeStyle = "#3e1e04";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -startR);
+      ctx.lineTo(0, -endR);
+      ctx.stroke();
+
+      // Arrowhead pointing toward pocket
+      ctx.fillStyle = "#3e1e04";
+      ctx.beginPath();
+      ctx.moveTo(0, -endR - 7);
+      ctx.lineTo(-5, -endR + 5);
+      ctx.lineTo(5, -endR + 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Decorative curved inner arc
+      ctx.beginPath();
+      ctx.arc(0, -startR - 14, 18, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  function drawPockets(ctx) {
+    POCKETS.forEach(p => {
+      ctx.save();
+      // Outer metallic/leather bezel
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, POCKET_RADIUS + 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#2b1204";
+      ctx.fill();
+
+      // Deep hole radial gradient
+      const holeGrad = ctx.createRadialGradient(p.x - 4, p.y - 4, 3, p.x, p.y, POCKET_RADIUS);
+      holeGrad.addColorStop(0, "#05020a");
+      holeGrad.addColorStop(0.72, "#12091c");
+      holeGrad.addColorStop(1, "#2a1608");
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = holeGrad;
+      ctx.fill();
+
+      // Subtle pocket net rim ring
+      ctx.strokeStyle = "rgba(255, 215, 0, 0.16)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, POCKET_RADIUS - 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  /* =========================================================================
+   * 4. GAME STATE, MODES, HEXAGONAL PACKING & PHYSICS ENTITIES
+   * ========================================================================= */
+  const boardCanvas = document.getElementById("boardCanvas");
+  const ctx = boardCanvas.getContext("2d");
+
+  let gameMode = "CLASSIC"; // "DISC" | "CLASSIC" | "FREESTYLE" | "PASS_PLAY"
+  let gameState = "IDLE";   // "AIMING" | "SIMULATING" | "AI_THINKING" | "GAME_OVER"
+  let currentTurn = 1;      // 1 = Player 1 (Bottom), 2 = AI / Player 2 (Top)
+  let turnTimeLeft = 1.0;   // 1.0 -> 0.0 countdown
+
+  // Queen cover state machine (for CLASSIC & FREESTYLE & PASS_PLAY)
+  // "ON_BOARD" | "PENDING_COVER" | "COVERED"
+  let queenState = "ON_BOARD";
+  let queenOwner = null;
+
+  // Scores & Pocketed Trays
+  let scores = { 1: 0, 2: 0 };
+  let trays = { 1: [], 2: [] };
+  let shotPocketedLog = []; // tracks everything pocketed during a single shot
+
+  // Physics Entities
+  let pucks = [];
+  let droppingPucks = []; // shrink-and-fade animation list
+  let particles = [];
+  let floatingTexts = [];
+
+  const striker = {
+    x: CENTER,
+    y: BASELINE_BOTTOM_Y,
+    vx: 0,
+    vy: 0,
+    r: STRIKER_RADIUS,
+    mass: 1.85,
+    visible: true,
+    overlapping: false
+  };
+
+  // Drag-to-Aim State
+  const aim = {
+    isDragging: false,
+    dragX: 0,
+    dragY: 0,
+    power: 0,      // 0..1
+    angle: -Math.PI / 2,
+    valid: false
+  };
+
+  // AI Animation State
+  const aiState = {
+    phase: "NONE",
+    timer: 0,
+    startX: CENTER,
+    targetX: CENTER,
+    targetAngle: Math.PI / 2,
+    targetPower: 0.65,
+    currentAngle: Math.PI / 2,
+    currentPower: 0
+  };
+
+  // Hexagonal packing of 19 pucks (or 18 in Disc Pool)
+  function spawnRack(includeQueen) {
+    pucks = [];
+    droppingPucks = [];
+    const r = PUCK_RADIUS; // 16.0
+    const gap = 0.6;
+    const d = 2 * r + gap;
+    let idCounter = 1;
+
+    if (includeQueen) {
+      pucks.push({
+        id: idCounter++,
+        type: "queen",
+        x: CENTER,
+        y: CENTER,
+        vx: 0,
+        vy: 0,
+        r: r,
+        mass: 1.0
+      });
+    }
+
+    // Inner ring: 6 pucks (alternating White, Black)
+    for (let i = 0; i < 6; i++) {
+      const angle = ((i * 60 - 90) * Math.PI) / 180;
+      const type = i % 2 === 0 ? "white" : "black";
+      pucks.push({
+        id: idCounter++,
+        type,
+        x: CENTER + Math.cos(angle) * d,
+        y: CENTER + Math.sin(angle) * d,
+        vx: 0,
+        vy: 0,
+        r: r,
+        mass: 1.0
+      });
+    }
+
+    // Outer ring: 12 pucks (6 White at 2*d corners, 6 Black at sqrt(3)*d edges)
+    for (let i = 0; i < 12; i++) {
+      const angle = ((i * 30 - 90) * Math.PI) / 180;
+      const isCorner = i % 2 === 0;
+      const dist = isCorner ? 2 * d : Math.sqrt(3) * d;
+      const type = isCorner ? "white" : "black";
+      pucks.push({
+        id: idCounter++,
+        type,
+        x: CENTER + Math.cos(angle) * dist,
+        y: CENTER + Math.sin(angle) * dist,
+        vx: 0,
+        vy: 0,
+        r: r,
+        mass: 1.0
+      });
+    }
+  }
+
+  /* =========================================================================
+   * 5. MATCH INITIALIZATION & TURN MANAGEMENT
+   * ========================================================================= */
+  const strikerRange = document.getElementById("strikerRange");
+  const sliderThumbVisual = document.getElementById("sliderThumbVisual");
+  const overlapWarning = document.getElementById("overlapWarning");
+  const statusStrip = document.getElementById("statusStrip");
+
+  function startMatch(mode) {
+    gameMode = mode;
+    currentTurn = 1;
+    scores = { 1: 0, 2: 0 };
+    trays = { 1: [], 2: [] };
+    particles = [];
+    floatingTexts = [];
+    queenState = mode === "DISC" ? "NONE" : "ON_BOARD";
+    queenOwner = null;
+
+    spawnRack(mode !== "DISC");
+
+    document.getElementById("lobbyScreen").classList.remove("active");
+    document.getElementById("gameScreen").classList.add("active");
+    document.getElementById("victoryModal").classList.remove("active");
+    stopConfetti();
+
+    const modeLabels = {
+      DISC: "DISC POOL",
+      CLASSIC: "CLASSIC CARROM",
+      FREESTYLE: "FREESTYLE 120",
+      PASS_PLAY: "2P CLASSIC"
+    };
+    document.getElementById("hudModeLabel").textContent = modeLabels[mode] || "CLASSIC";
+
+    if (mode === "FREESTYLE") {
+      document.getElementById("hudNameP1").textContent = "You (Points)";
+      document.getElementById("hudNameP2").textContent = "AI Bot (Points)";
+      document.getElementById("hudAvatarP2").textContent = "🤖";
+    } else if (mode === "PASS_PLAY") {
+      document.getElementById("hudNameP1").textContent = "Player 1 (White)";
+      document.getElementById("hudNameP2").textContent = "Player 2 (Black)";
+      document.getElementById("hudAvatarP2").textContent = "🧑";
+    } else {
+      document.getElementById("hudNameP1").textContent = "You (White)";
+      document.getElementById("hudNameP2").textContent = "AI Master (Black)";
+      document.getElementById("hudAvatarP2").textContent = "🤖";
+    }
+
+    setupTurn(1, false);
+    updateHUD();
+  }
+
+  function setupTurn(player, isBonusTurn = false) {
+    currentTurn = player;
+    turnTimeLeft = 1.0;
+    shotPocketedLog = [];
+    aim.isDragging = false;
+    aim.power = 0;
+
+    striker.vx = 0;
+    striker.vy = 0;
+    striker.visible = true;
+    striker.y = player === 1 ? BASELINE_BOTTOM_Y : BASELINE_TOP_Y;
+
+    // Position striker at center or nearest clear spot
+    strikerRange.value = 500;
+    const clearX = findNearestClearBaselineX(CENTER, striker.y);
+    setStrikerXFromBoard(clearX);
+
+    document.getElementById("hudCardP1").classList.toggle("active-turn", player === 1);
+    document.getElementById("hudCardP2").classList.toggle("active-turn", player === 2);
+
+    const isAI = player === 2 && gameMode !== "PASS_PLAY";
+    strikerRange.disabled = isAI;
+
+    if (queenState === "PENDING_COVER") {
+      setStatus(`👑 Cover the Red Queen! Pocket a valid puck on this shot.`);
+    } else if (isBonusTurn) {
+      setStatus(player === 1 ? "🔥 Bonus Turn! Aim & shoot again." : "⚡ Opponent Bonus Turn!");
+    } else {
+      if (isAI) {
+        setStatus("🤖 AI Master is calculating trajectory...");
+      } else {
+        const who = gameMode === "PASS_PLAY" ? `Player ${player}'s Turn` : "Your Turn";
+        setStatus(`${who} — Slide striker & drag back to shoot!`);
+      }
+    }
+
+    if (isAI) {
+      gameState = "AI_THINKING";
+      planAIShot();
+    } else {
+      gameState = "AIMING";
+    }
+  }
+
+  function setStatus(msg) {
+    statusStrip.textContent = msg;
+  }
+
+  function setStrikerXFromBoard(boardX) {
+    const clamped = Math.max(BASELINE_X_MIN, Math.min(BASELINE_X_MAX, boardX));
+    striker.x = clamped;
+    const ratio = (clamped - BASELINE_X_MIN) / (BASELINE_X_MAX - BASELINE_X_MIN);
+    strikerRange.value = Math.round(ratio * 1000);
+    updateSliderVisual();
+    checkStrikerOverlap();
+  }
+
+  function updateSliderVisual() {
+    const ratio = Number(strikerRange.value) / 1000;
+    const pct = 6 + ratio * 88;
+    sliderThumbVisual.style.left = `${pct}%`;
+  }
+
+  function checkStrikerOverlap() {
+    let hit = false;
+    for (const p of pucks) {
+      const dx = p.x - striker.x;
+      const dy = p.y - striker.y;
+      if (Math.hypot(dx, dy) < p.r + striker.r + 1.5) {
+        hit = true;
+        break;
+      }
+    }
+    striker.overlapping = hit;
+    sliderThumbVisual.classList.toggle("overlap", hit);
+    overlapWarning.style.display = hit ? "inline" : "none";
+    return hit;
+  }
+
+  function findNearestClearBaselineX(preferredX, baselineY) {
+    for (let offset = 0; offset <= 240; offset += 8) {
+      for (const dir of [1, -1]) {
+        const testX = preferredX + offset * dir;
+        if (testX < BASELINE_X_MIN || testX > BASELINE_X_MAX) continue;
+        let clear = true;
+        for (const p of pucks) {
+          if (Math.hypot(p.x - testX, p.y - baselineY) < p.r + striker.r + 2) {
+            clear = false;
+            break;
+          }
+        }
+        if (clear) return testX;
+      }
+    }
+    return preferredX;
+  }
+
+  // Slider input listener
+  strikerRange.addEventListener("input", () => {
+    if (gameState !== "AIMING") return;
+    const ratio = Number(strikerRange.value) / 1000;
+    striker.x = BASELINE_X_MIN + ratio * (BASELINE_X_MAX - BASELINE_X_MIN);
+    updateSliderVisual();
+    checkStrikerOverlap();
+  });
+
+  /* =========================================================================
+   * 6. DRAG-TO-AIM & GHOST BALL RAYCASTING (Miniclip Style)
+   * ========================================================================= */
+  function getCanvasCoords(e) {
+    const rect = boardCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: ((clientX - rect.left) / rect.width) * BOARD_SIZE,
+      y: ((clientY - rect.top) / rect.height) * BOARD_SIZE
+    };
+  }
+
+  function onPointerDown(e) {
+    if (gameState !== "AIMING") return;
+    sound.init();
+    const pt = getCanvasCoords(e);
+    const dist = Math.hypot(pt.x - striker.x, pt.y - striker.y);
+
+    // Allow grabbing striker directly (generous touch radius)
+    if (dist <= striker.r * 2.8) {
+      checkStrikerOverlap();
+      if (striker.overlapping) {
+        addFloatingText("OVERLAP! USE SLIDER", striker.x, striker.y - 30, "#ff3d57");
+        return;
+      }
+      aim.isDragging = true;
+      aim.dragX = pt.x;
+      aim.dragY = pt.y;
+      aim.power = 0;
+      aim.valid = false;
+    }
+  }
+
+  function onPointerMove(e) {
+    if (!aim.isDragging || gameState !== "AIMING") return;
+    const pt = getCanvasCoords(e);
+    aim.dragX = pt.x;
+    aim.dragY = pt.y;
+
+    const dx = striker.x - pt.x;
+    const dy = striker.y - pt.y;
+    const pullDist = Math.hypot(dx, dy);
+
+    if (pullDist < 14) {
+      aim.valid = false;
+      aim.power = 0;
+    } else {
+      aim.valid = true;
+      aim.power = Math.min(1.0, (pullDist - 10) / 135);
+      aim.angle = Math.atan2(dy, dx);
+    }
+  }
+
+  function onPointerUp() {
+    if (!aim.isDragging) return;
+    aim.isDragging = false;
+    if (gameState !== "AIMING") return;
+
+    if (aim.valid && aim.power > 0.05 && !striker.overlapping) {
+      launchStriker(aim.angle, aim.power);
+    } else {
+      aim.power = 0;
+      aim.valid = false;
+    }
+  }
+
+  boardCanvas.addEventListener("mousedown", onPointerDown);
+  window.addEventListener("mousemove", onPointerMove);
+  window.addEventListener("mouseup", onPointerUp);
+
+  boardCanvas.addEventListener("touchstart", e => { e.preventDefault(); onPointerDown(e); }, { passive: false });
+  window.addEventListener("touchmove", e => { if (aim.isDragging) e.preventDefault(); onPointerMove(e); }, { passive: false });
+  window.addEventListener("touchend", onPointerUp);
+
+  function launchStriker(angle, powerNorm) {
+    const maxSpeed = 29.5;
+    const speed = 3.2 + powerNorm * (maxSpeed - 3.2);
+    striker.vx = Math.cos(angle) * speed;
+    striker.vy = Math.sin(angle) * speed;
+    shotPocketedLog = [];
+    gameState = "SIMULATING";
+    sound.playUIClick();
+  }
+
+  // Exact ray-circle + cushion intersection for Ghost Puck & Deflection Arrow
+  function computeTrajectoryRay(startX, startY, angle) {
+    const dirX = Math.cos(angle);
+    const dirY = Math.sin(angle);
+    let minT = Infinity;
+    let hitPuck = null;
+
+    // 1. Check intersection with every puck (combined radius = striker.r + puck.r)
+    for (const p of pucks) {
+      const combinedR = striker.r + p.r;
+      const ox = p.x - startX;
+      const oy = p.y - startY;
+      const proj = ox * dirX + oy * dirY;
+      if (proj <= 0) continue;
+
+      const perpSq = ox * ox + oy * oy - proj * proj;
+      const radSq = combinedR * combinedR;
+      if (perpSq < radSq) {
+        const t = proj - Math.sqrt(radSq - perpSq);
+        if (t > 0 && t < minT) {
+          minT = t;
+          hitPuck = p;
+        }
+      }
+    }
+
+    // 2. Check intersection with cushions
+    const minBound = PLAY_MIN + striker.r;
+    const maxBound = PLAY_MAX - striker.r;
+    let wallT = Infinity;
+
+    if (dirX > 0.0001) wallT = Math.min(wallT, (maxBound - startX) / dirX);
+    if (dirX < -0.0001) wallT = Math.min(wallT, (minBound - startX) / dirX);
+    if (dirY > 0.0001) wallT = Math.min(wallT, (maxBound - startY) / dirY);
+    if (dirY < -0.0001) wallT = Math.min(wallT, (minBound - startY) / dirY);
+
+    if (hitPuck && minT < wallT) {
+      const ghostX = startX + dirX * minT;
+      const ghostY = startY + dirY * minT;
+      const nx = (hitPuck.x - ghostX) / (striker.r + hitPuck.r);
+      const ny = (hitPuck.y - ghostY) / (striker.r + hitPuck.r);
+      return {
+        endX: ghostX,
+        endY: ghostY,
+        hitPuck,
+        normalX: nx,
+        normalY: ny
+      };
+    }
+
+    const clampedT = Math.min(wallT, 480);
+    return {
+      endX: startX + dirX * clampedT,
+      endY: startY + dirY * clampedT,
+      hitPuck: null
+    };
+  }
+
+  /* =========================================================================
+   * 7. 60 FPS SUB-STEPPED ELASTIC PHYSICS ENGINE
+   * ========================================================================= */
+  const SUB_STEPS = 8;
+  const WALL_RESTITUTION = 0.82;
+  const PUCK_RESTITUTION = 0.93;
+  const FRICTION_PER_FRAME = 0.9835;
+
+  function stepPhysics() {
+    const stepFriction = Math.pow(FRICTION_PER_FRAME, 1 / SUB_STEPS);
+
+    for (let step = 0; step < SUB_STEPS; step++) {
+      const bodies = striker.visible ? [striker, ...pucks] : [...pucks];
+
+      // 1. Integrate positions & apply powder-coated surface friction
+      for (const b of bodies) {
+        b.x += b.vx / SUB_STEPS;
+        b.y += b.vy / SUB_STEPS;
+        b.vx *= stepFriction;
+        b.vy *= stepFriction;
+
+        // Micro-creep cutoff near zero
+        const spd = Math.hypot(b.vx, b.vy);
+        if (spd > 0 && spd < 0.045) {
+          b.vx = 0;
+          b.vy = 0;
+        }
+      }
+
+      // 2. Pocket Rim Pull & Pocket Drop Check
+      for (let i = bodies.length - 1; i >= 0; i--) {
+        const b = bodies[i];
+        let pocketed = false;
+
+        for (const pk of POCKETS) {
+          const dx = pk.x - b.x;
+          const dy = pk.y - b.y;
+          const dist = Math.hypot(dx, dy);
+
+          // Inner drop radius
+          if (dist < POCKET_RADIUS - 2.5) {
+            handleEntityPocketed(b, pk);
+            pocketed = true;
+            break;
+          }
+          // Rim gravity well pull
+          else if (dist < POCKET_GRAVITY_RADIUS) {
+            const pull = (1 - dist / POCKET_GRAVITY_RADIUS) * 0.24;
+            b.vx += (dx / dist) * pull;
+            b.vy += (dy / dist) * pull;
+          }
+        }
+        if (pocketed) continue;
+
+        // 3. Cushion Bounce (skip wall bounce if right inside pocket mouth)
+        const nearCorner = POCKETS.some(pk => Math.hypot(pk.x - b.x, pk.y - b.y) < POCKET_RADIUS + 8);
+        if (!nearCorner) {
+          const minB = PLAY_MIN + b.r;
+          const maxB = PLAY_MAX - b.r;
+
+          if (b.x < minB) {
+            b.x = minB;
+            const impact = Math.abs(b.vx);
+            b.vx = impact * WALL_RESTITUTION;
+            if (impact > 1.2) sound.playCushionThud(impact);
+          } else if (b.x > maxB) {
+            b.x = maxB;
+            const impact = Math.abs(b.vx);
+            b.vx = -impact * WALL_RESTITUTION;
+            if (impact > 1.2) sound.playCushionThud(impact);
+          }
+
+          if (b.y < minB) {
+            b.y = minB;
+            const impact = Math.abs(b.vy);
+            b.vy = impact * WALL_RESTITUTION;
+            if (impact > 1.2) sound.playCushionThud(impact);
+          } else if (b.y > maxB) {
+            b.y = maxB;
+            const impact = Math.abs(b.vy);
+            b.vy = -impact * WALL_RESTITUTION;
+            if (impact > 1.2) sound.playCushionThud(impact);
+          }
+        }
+      }
+
+      // 4. Circle-to-Circle Elastic Collision Resolution
+      const activeBodies = striker.visible ? [striker, ...pucks] : [...pucks];
+      for (let i = 0; i < activeBodies.length; i++) {
+        for (let j = i + 1; j < activeBodies.length; j++) {
+          const A = activeBodies[i];
+          const B = activeBodies[j];
+          const dx = B.x - A.x;
+          const dy = B.y - A.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = A.r + B.r;
+
+          if (dist > 0 && dist < minDist) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // Positional separation proportional to inverse mass
+            const overlap = minDist - dist;
+            const invMassA = 1 / A.mass;
+            const invMassB = 1 / B.mass;
+            const totalInvMass = invMassA + invMassB;
+
+            A.x -= nx * overlap * (invMassA / totalInvMass);
+            A.y -= ny * overlap * (invMassA / totalInvMass);
+            B.x += nx * overlap * (invMassB / totalInvMass);
+            B.y += ny * overlap * (invMassB / totalInvMass);
+
+            // Relative velocity along normal
+            const rvx = B.vx - A.vx;
+            const rvy = B.vy - A.vy;
+            const velAlongNormal = rvx * nx + rvy * ny;
+
+            if (velAlongNormal < 0) {
+              const jImpulse = (-(1 + PUCK_RESTITUTION) * velAlongNormal) / totalInvMass;
+              const impulseX = jImpulse * nx;
+              const impulseY = jImpulse * ny;
+
+              A.vx -= impulseX * invMassA;
+              A.vy -= impulseY * invMassA;
+              B.vx += impulseX * invMassB;
+              B.vy += impulseY * invMassB;
+
+              const impactSpeed = Math.abs(velAlongNormal);
+              if (impactSpeed > 0.45) {
+                sound.playPuckHit(impactSpeed);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check if all bodies have stopped moving
+    let moving = false;
+    if (striker.visible && (Math.abs(striker.vx) > 0 || Math.abs(striker.vy) > 0)) {
+      moving = true;
+    }
+    for (const p of pucks) {
+      if (Math.abs(p.vx) > 0 || Math.abs(p.vy) > 0) {
+        moving = true;
+        break;
+      }
+    }
+
+    if (!moving && droppingPucks.length === 0) {
+      evaluateShotOutcome();
+    }
+  }
+
+  function handleEntityPocketed(entity, pocket) {
+    if (entity === striker) {
+      striker.visible = false;
+      striker.vx = 0;
+      striker.vy = 0;
+      shotPocketedLog.push("striker");
+      droppingPucks.push({
+        type: "striker",
+        x: striker.x,
+        y: striker.y,
+        tx: pocket.x,
+        ty: pocket.y,
+        r: striker.r,
+        alpha: 1
+      });
+      spawnPocketSparkles(pocket.x, pocket.y, "#ff1744", 22);
+      sound.playPocketDrop(false, true);
+    } else {
+      const idx = pucks.indexOf(entity);
+      if (idx !== -1) pucks.splice(idx, 1);
+      shotPocketedLog.push(entity.type);
+      droppingPucks.push({
+        type: entity.type,
+        x: entity.x,
+        y: entity.y,
+        tx: pocket.x,
+        ty: pocket.y,
+        r: entity.r,
+        alpha: 1
+      });
+      const color = entity.type === "queen" ? "#ff1744" : "#ffd700";
+      spawnPocketSparkles(pocket.x, pocket.y, color, 26);
+      sound.playPocketDrop(entity.type === "queen", false);
+    }
+  }
+
+  /* =========================================================================
+   * 8. OFFICIAL CARROM RULES, QUEEN COVER & FOUL EVALUATION
+   * ========================================================================= */
+  function returnPuckToCenter(type) {
+    let placedX = CENTER;
+    let placedY = CENTER;
+    for (let rad = 0; rad <= 120; rad += 6) {
+      let found = false;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        const tx = CENTER + Math.cos(a) * rad;
+        const ty = CENTER + Math.sin(a) * rad;
+        const overlap = pucks.some(p => Math.hypot(p.x - tx, p.y - ty) < p.r * 2 + 1);
+        if (!overlap) {
+          placedX = tx;
+          placedY = ty;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+
+    pucks.push({
+      id: Date.now() + Math.random(),
+      type,
+      x: placedX,
+      y: placedY,
+      vx: 0,
+      vy: 0,
+      r: PUCK_RADIUS,
+      mass: 1.0
+    });
+  }
+
+  function evaluateShotOutcome() {
+    const strikerFoul = shotPocketedLog.includes("striker");
+    const pocketedQueen = shotPocketedLog.includes("queen");
+    const whiteCount = shotPocketedLog.filter(t => t === "white").length;
+    const blackCount = shotPocketedLog.filter(t => t === "black").length;
+
+    let keepTurn = false;
+
+    // ---------------- MODE A: FREESTYLE (Points System) ----------------
+    if (gameMode === "FREESTYLE") {
+      for (let i = 0; i < whiteCount; i++) {
+        scores[currentTurn] += 20;
+        trays[currentTurn].push("white");
+      }
+      for (let i = 0; i < blackCount; i++) {
+        scores[currentTurn] += 10;
+        trays[currentTurn].push("black");
+      }
+
+      const validPucksCount = whiteCount + blackCount;
+
+      if (strikerFoul) {
+        addFloatingText("FOUL! STRIKER POCKETED", CENTER, CENTER - 30, "#ff3d57");
+        if (pocketedQueen || queenState === "PENDING_COVER") {
+          returnPuckToCenter("queen");
+          queenState = "ON_BOARD";
+          addFloatingText("QUEEN RETURNED!", CENTER, CENTER + 18, "#ffd700");
+        }
+        if (trays[currentTurn].length > 0) {
+          const removed = trays[currentTurn].pop();
+          const deduct = removed === "white" ? 20 : removed === "black" ? 10 : 50;
+          scores[currentTurn] = Math.max(0, scores[currentTurn] - deduct);
+          if (removed !== "queen") returnPuckToCenter(removed);
+        }
+        keepTurn = false;
+      } else {
+        if (pocketedQueen) {
+          if (validPucksCount > 0) {
+            queenState = "COVERED";
+            queenOwner = currentTurn;
+            scores[currentTurn] += 50;
+            trays[currentTurn].push("queen");
+            addFloatingText("QUEEN COVERED! +50", CENTER, CENTER, "#00e676");
+          } else {
+            queenState = "PENDING_COVER";
+            addFloatingText("QUEEN POCKETED! COVER NEXT", CENTER, CENTER, "#ffd700");
+          }
+          keepTurn = true;
+        } else if (queenState === "PENDING_COVER") {
+          if (validPucksCount > 0) {
+            queenState = "COVERED";
+            queenOwner = currentTurn;
+            scores[currentTurn] += 50;
+            trays[currentTurn].push("queen");
+            addFloatingText("QUEEN COVERED! +50", CENTER, CENTER, "#00e676");
+            keepTurn = true;
+          } else {
+            returnPuckToCenter("queen");
+            queenState = "ON_BOARD";
+            addFloatingText("NO COVER! QUEEN RETURNED", CENTER, CENTER, "#ff9100");
+            keepTurn = false;
+          }
+        } else if (validPucksCount > 0) {
+          const pts = whiteCount * 20 + blackCount * 10;
+          addFloatingText(`NICE SHOT! +${pts}`, CENTER, CENTER, "#00e676");
+          keepTurn = true;
+        }
+      }
+
+      updateHUD();
+      if (scores[1] >= 120 || scores[2] >= 120 || pucks.length === 0) {
+        const winner = scores[1] >= scores[2] ? 1 : 2;
+        finishMatch(winner);
+        return;
+      }
+    }
+
+    // ---------------- MODE B: DISC POOL / CLASSIC / 2P PASS & PLAY ----------------
+    else {
+      const myColor = currentTurn === 1 ? "white" : "black";
+      const myPocketed = currentTurn === 1 ? whiteCount : blackCount;
+      const oppPocketed = currentTurn === 1 ? blackCount : whiteCount;
+
+      for (let i = 0; i < whiteCount; i++) {
+        scores[1]++;
+        trays[1].push("white");
+      }
+      for (let i = 0; i < blackCount; i++) {
+        scores[2]++;
+        trays[2].push("black");
+      }
+
+      if (strikerFoul) {
+        addFloatingText("FOUL! STRIKER POCKETED", CENTER, CENTER - 28, "#ff3d57");
+        if (pocketedQueen || queenState === "PENDING_COVER") {
+          returnPuckToCenter("queen");
+          queenState = "ON_BOARD";
+          addFloatingText("QUEEN RETURNED!", CENTER, CENTER + 18, "#ffd700");
+        }
+        const myPuckIdx = trays[currentTurn].lastIndexOf(myColor);
+        if (myPuckIdx !== -1) {
+          trays[currentTurn].splice(myPuckIdx, 1);
+          scores[currentTurn] = Math.max(0, scores[currentTurn] - 1);
+          returnPuckToCenter(myColor);
+        }
+        keepTurn = false;
+      } else {
+        if (gameMode === "DISC") {
+          if (myPocketed > 0) {
+            addFloatingText(myPocketed > 1 ? "DOUBLE SHOT!" : "NICE SHOT!", CENTER, CENTER, "#00e676");
+            keepTurn = true;
+          } else if (oppPocketed > 0) {
+            addFloatingText("OPPONENT PUCK!", CENTER, CENTER, "#ff9100");
+            keepTurn = false;
+          }
+        } else {
+          // CLASSIC & 2P PASS_PLAY Queen Cover Logic
+          if (pocketedQueen) {
+            if (myPocketed > 0) {
+              queenState = "COVERED";
+              queenOwner = currentTurn;
+              trays[currentTurn].push("queen");
+              addFloatingText("QUEEN COVERED!", CENTER, CENTER, "#00e676");
+            } else {
+              queenState = "PENDING_COVER";
+              addFloatingText("QUEEN POCKETED! COVER NOW", CENTER, CENTER, "#ffd700");
+            }
+            keepTurn = true;
+          } else if (queenState === "PENDING_COVER") {
+            if (myPocketed > 0) {
+              queenState = "COVERED";
+              queenOwner = currentTurn;
+              trays[currentTurn].push("queen");
+              addFloatingText("QUEEN COVERED!", CENTER, CENTER, "#00e676");
+              keepTurn = true;
+            } else {
+              returnPuckToCenter("queen");
+              queenState = "ON_BOARD";
+              addFloatingText("QUEEN NOT COVERED! RETURNED", CENTER, CENTER, "#ff9100");
+              keepTurn = false;
+            }
+          } else if (myPocketed > 0) {
+            addFloatingText(myPocketed > 1 ? "SUPER SHOT!" : "NICE SHOT!", CENTER, CENTER, "#00e676");
+            keepTurn = true;
+          } else if (oppPocketed > 0) {
+            addFloatingText("OPPONENT PUCK POCKETED!", CENTER, CENTER, "#ff9100");
+            keepTurn = false;
+          }
+        }
+      }
+
+      // Guard rule in Classic: if a player pockets their 9th puck while Queen is still ON_BOARD, return 1 puck
+      if (gameMode !== "DISC") {
+        [1, 2].forEach(pNum => {
+          const pColor = pNum === 1 ? "white" : "black";
+          if (scores[pNum] >= 9 && queenState === "ON_BOARD") {
+            scores[pNum]--;
+            const idx = trays[pNum].lastIndexOf(pColor);
+            if (idx !== -1) trays[pNum].splice(idx, 1);
+            returnPuckToCenter(pColor);
+            addFloatingText("MUST POCKET QUEEN FIRST!", CENTER, CENTER + 24, "#ff9100");
+            keepTurn = false;
+          }
+        });
+      }
+
+      updateHUD();
+
+      // Check Victory Conditions
+      if (scores[1] >= 9 && (gameMode === "DISC" || queenState === "COVERED")) {
+        finishMatch(1);
+        return;
+      }
+      if (scores[2] >= 9 && (gameMode === "DISC" || queenState === "COVERED")) {
+        finishMatch(2);
+        return;
+      }
+    }
+
+    const nextPlayer = keepTurn ? currentTurn : (currentTurn === 1 ? 2 : 1);
+    setupTurn(nextPlayer, keepTurn);
+  }
+
+  /* =========================================================================
+   * 9. SMART AI BOT WITH GHOST-BALL CUT ANGLE & AIM ANIMATION
+   * ========================================================================= */
+  function isPathClear(x1, y1, x2, y2, ignorePuck, radiusBuffer) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return true;
+    const ux = dx / len;
+    const uy = dy / len;
+
+    for (const p of pucks) {
+      if (p === ignorePuck) continue;
+      const vx = p.x - x1;
+      const vy = p.y - y1;
+      const proj = vx * ux + vy * uy;
+      if (proj <= 0 || proj >= len) continue;
+      const perp = Math.abs(vx * uy - vy * ux);
+      if (perp < p.r + radiusBuffer) return false;
+    }
+    return true;
+  }
+
+  function planAIShot() {
+    aiState.phase = "SLIDING";
+    aiState.timer = 0;
+    aiState.startX = striker.x;
+
+    let candidates = [];
+    if (gameMode === "FREESTYLE") {
+      candidates = [...pucks];
+    } else if (gameMode === "DISC") {
+      candidates = pucks.filter(p => p.type === "black");
+    } else {
+      const blacks = pucks.filter(p => p.type === "black");
+      const queen = pucks.find(p => p.type === "queen");
+      if (queenState === "PENDING_COVER") {
+        candidates = blacks;
+      } else if (queen && scores[2] >= 2) {
+        candidates = [queen, ...blacks];
+      } else {
+        candidates = queen ? [...blacks, queen] : blacks;
+      }
+    }
+
+    if (candidates.length === 0) candidates = [...pucks];
+
+    let bestShot = null;
+    let bestScore = -Infinity;
+
+    // Test 15 baseline X positions across the top baseline
+    for (let step = 0; step <= 14; step++) {
+      const rawX = BASELINE_X_MIN + (step / 14) * (BASELINE_X_MAX - BASELINE_X_MIN);
+      const sx = findNearestClearBaselineX(rawX, BASELINE_TOP_Y);
+      const sy = BASELINE_TOP_Y;
+
+      for (const target of candidates) {
+        for (const pk of POCKETS) {
+          const toPkX = pk.x - target.x;
+          const toPkY = pk.y - target.y;
+          const distToPk = Math.hypot(toPkX, toPkY);
+          const ux = toPkX / distToPk;
+          const uy = toPkY / distToPk;
+
+          // Required Ghost Striker center at impact
+          const contactDist = striker.r + target.r;
+          const ghostX = target.x - ux * contactDist;
+          const ghostY = target.y - uy * contactDist;
+
+          const aimX = ghostX - sx;
+          const aimY = ghostY - sy;
+          const distToGhost = Math.hypot(aimX, aimY);
+          const ax = aimX / distToGhost;
+          const ay = aimY / distToGhost;
+
+          const cutCos = ax * ux + ay * uy;
+          if (cutCos < 0.28) continue;
+
+          const clearToGhost = isPathClear(sx, sy, ghostX, ghostY, target, striker.r * 0.85);
+          const clearToPocket = isPathClear(target.x, target.y, pk.x, pk.y, target, target.r * 0.85);
+
+          let score = cutCos * 120 - distToPk * 0.12 - distToGhost * 0.08;
+          if (clearToGhost) score += 90;
+          if (clearToPocket) score += 85;
+          if (target.type === "queen") score += 45;
+          if (target.type === "white" && gameMode === "FREESTYLE") score += 20;
+
+          if (score > bestScore) {
+            bestScore = score;
+            const idealPower = Math.min(0.92, Math.max(0.38, (distToGhost + distToPk) / 560 + (1 - cutCos) * 0.25));
+            bestShot = {
+              x: sx,
+              angle: Math.atan2(aimY, aimX) + (Math.random() - 0.5) * 0.018,
+              power: idealPower
+            };
+          }
+        }
+      }
+    }
+
+    if (!bestShot && candidates.length > 0) {
+      const t = candidates[0];
+      const sx = findNearestClearBaselineX(CENTER, BASELINE_TOP_Y);
+      bestShot = {
+        x: sx,
+        angle: Math.atan2(t.y - BASELINE_TOP_Y, t.x - sx),
+        power: 0.78
+      };
+    }
+
+    aiState.targetX = bestShot ? bestShot.x : CENTER;
+    aiState.targetAngle = bestShot ? bestShot.angle : Math.PI / 2;
+    aiState.targetPower = bestShot ? bestShot.power : 0.65;
+    aiState.currentAngle = Math.PI / 2;
+    aiState.currentPower = 0;
+  }
+
+  function updateAI() {
+    aiState.timer += 1 / 60;
+
+    if (aiState.phase === "SLIDING") {
+      const t = Math.min(1, aiState.timer / 0.55);
+      const smooth = t * t * (3 - 2 * t);
+      const curX = aiState.startX + (aiState.targetX - aiState.startX) * smooth;
+      setStrikerXFromBoard(curX);
+      if (t >= 1) {
+        aiState.phase = "AIMING";
+        aiState.timer = 0;
+      }
+    } else if (aiState.phase === "AIMING") {
+      const t = Math.min(1, aiState.timer / 0.65);
+      const smooth = t * t * (3 - 2 * t);
+      aiState.currentAngle = Math.PI / 2 + (aiState.targetAngle - Math.PI / 2) * smooth;
+      aiState.currentPower = aiState.targetPower * smooth;
+
+      aim.isDragging = true;
+      aim.valid = true;
+      aim.angle = aiState.currentAngle;
+      aim.power = aiState.currentPower;
+
+      if (t >= 1) {
+        aim.isDragging = false;
+        aim.valid = false;
+        aiState.phase = "NONE";
+        launchStriker(aiState.targetAngle, aiState.targetPower);
+      }
+    }
+  }
+
+  /* =========================================================================
+   * 10. HUD, TIMER RINGS, PARTICLES & FLOATING CALLOUTS
+   * ========================================================================= */
+  function updateHUD() {
+    if (gameMode === "FREESTYLE") {
+      document.getElementById("hudScoreP1").textContent = `${scores[1]} pts`;
+      document.getElementById("hudScoreP2").textContent = `${scores[2]} pts`;
+    } else {
+      document.getElementById("hudScoreP1").textContent = `${scores[1]}/9`;
+      document.getElementById("hudScoreP2").textContent = `${scores[2]}/9`;
+    }
+
+    renderMiniTray("trayP1", trays[1]);
+    renderMiniTray("trayP2", trays[2]);
+  }
+
+  function renderMiniTray(elementId, list) {
+    const container = document.getElementById(elementId);
+    container.innerHTML = "";
+    list.slice(-10).forEach(type => {
+      const dot = document.createElement("span");
+      dot.className = `tray-dot ${type}`;
+      container.appendChild(dot);
+    });
+  }
+
+  function drawTurnTimerRings() {
+    drawSingleTimerRing("timerRingP1", currentTurn === 1 ? turnTimeLeft : 0);
+    drawSingleTimerRing("timerRingP2", currentTurn === 2 ? turnTimeLeft : 0);
+  }
+
+  function drawSingleTimerRing(canvasId, fraction) {
+    const c = document.getElementById(canvasId);
+    const rctx = c.getContext("2d");
+    rctx.clearRect(0, 0, c.width, c.height);
+    if (fraction <= 0) return;
+
+    const cx = c.width / 2;
+    const cy = c.height / 2;
+    const rad = 43;
+
+    rctx.save();
+    rctx.lineWidth = 5;
+    rctx.lineCap = "round";
+    rctx.strokeStyle = fraction > 0.35 ? "#00e676" : "#ff3d57";
+    rctx.shadowColor = rctx.strokeStyle;
+    rctx.shadowBlur = 8;
+    rctx.beginPath();
+    rctx.arc(cx, cy, rad, -Math.PI / 2, -Math.PI / 2 + fraction * Math.PI * 2);
+    rctx.stroke();
+    rctx.restore();
+  }
+
+  function spawnPocketSparkles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 1.2 + Math.random() * 5.2;
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        r: 2 + Math.random() * 3.5,
+        alpha: 1,
+        color
+      });
+    }
+  }
+
+  function addFloatingText(text, x, y, color) {
+    floatingTexts.push({
+      text,
+      x,
+      y,
+      vy: -1.1,
+      alpha: 1.0,
+      color
+    });
+  }
+
+  /* =========================================================================
+   * 11. PROCEDURAL 3D-LOOK PUCK, STRIKER & AIM GRAPHICS RENDERER
+   * ========================================================================= */
+  function drawPuck(targetCtx, x, y, r, type, alpha = 1) {
+    targetCtx.save();
+    targetCtx.globalAlpha = alpha;
+
+    // 1. Soft Board Drop Shadow
+    targetCtx.beginPath();
+    targetCtx.arc(x + 2.5, y + 3.5, r, 0, Math.PI * 2);
+    targetCtx.fillStyle = "rgba(15, 6, 2, 0.42)";
+    targetCtx.fill();
+
+    // 2. Main Acrylic Body Gradient
+    const grad = targetCtx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    if (type === "white") {
+      grad.addColorStop(0, "#fffdf9");
+      grad.addColorStop(0.7, "#efe5d8");
+      grad.addColorStop(1, "#b8a38c");
+    } else if (type === "black") {
+      grad.addColorStop(0, "#4f4f4f");
+      grad.addColorStop(0.65, "#1f1f1f");
+      grad.addColorStop(1, "#080808");
+    } else if (type === "queen") {
+      grad.addColorStop(0, "#ff6b6b");
+      grad.addColorStop(0.6, "#d50000");
+      grad.addColorStop(1, "#6a0000");
+    }
+
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r, 0, Math.PI * 2);
+    targetCtx.fillStyle = grad;
+    targetCtx.fill();
+
+    // 3. Acrylic Bevel Ridge Rings
+    targetCtx.lineWidth = 1.4;
+    targetCtx.strokeStyle = type === "white" ? "rgba(140, 110, 80, 0.45)" : "rgba(255, 255, 255, 0.22)";
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+    targetCtx.stroke();
+
+    // Golden Crown Emblem inside Red Queen
+    if (type === "queen") {
+      targetCtx.fillStyle = "#ffd700";
+      targetCtx.beginPath();
+      const cw = r * 0.45;
+      const ch = r * 0.32;
+      targetCtx.moveTo(x - cw, y + ch * 0.6);
+      targetCtx.lineTo(x - cw, y - ch * 0.5);
+      targetCtx.lineTo(x - cw * 0.45, y);
+      targetCtx.lineTo(x, y - ch * 0.8);
+      targetCtx.lineTo(x + cw * 0.45, y);
+      targetCtx.lineTo(x + cw, y - ch * 0.5);
+      targetCtx.lineTo(x + cw, y + ch * 0.6);
+      targetCtx.closePath();
+      targetCtx.fill();
+    }
+
+    // 4. Glossy Top-Left Specular Highlight
+    const spec = targetCtx.createLinearGradient(x - r * 0.5, y - r * 0.7, x, y);
+    spec.addColorStop(0, "rgba(255, 255, 255, 0.65)");
+    spec.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+    targetCtx.beginPath();
+    targetCtx.arc(x - r * 0.15, y - r * 0.2, r * 0.55, 0, Math.PI * 2);
+    targetCtx.fillStyle = spec;
+    targetCtx.fill();
+
+    targetCtx.restore();
+  }
+
+  function drawStriker(targetCtx, x, y, r, overlapping = false, pulsePhase = 0) {
+    const theme = STRIKER_THEMES[currentStrikerThemeIdx];
+    targetCtx.save();
+
+    // Drop Shadow
+    targetCtx.beginPath();
+    targetCtx.arc(x + 3, y + 4, r, 0, Math.PI * 2);
+    targetCtx.fillStyle = "rgba(0, 0, 0, 0.48)";
+    targetCtx.fill();
+
+    // Neon Outer Glow
+    targetCtx.shadowColor = overlapping ? "#ff1744" : theme.glow;
+    targetCtx.shadowBlur = overlapping ? 18 : 11;
+
+    // Outer Metallic Gold / Theme Ring
+    const ringGrad = targetCtx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    if (overlapping) {
+      const blink = 0.55 + 0.45 * Math.sin(pulsePhase * 12);
+      ringGrad.addColorStop(0, `rgba(255, 138, 128, ${blink})`);
+      ringGrad.addColorStop(1, `rgba(213, 0, 0, ${blink})`);
+    } else {
+      ringGrad.addColorStop(0, "#ffffff");
+      ringGrad.addColorStop(0.35, theme.ring);
+      ringGrad.addColorStop(1, "#7a4f00");
+    }
+
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r, 0, Math.PI * 2);
+    targetCtx.fillStyle = ringGrad;
+    targetCtx.fill();
+    targetCtx.shadowBlur = 0;
+
+    // Inner Crystalline Core
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r * 0.68, 0, Math.PI * 2);
+    targetCtx.fillStyle = overlapping ? "#4a000b" : theme.core;
+    targetCtx.fill();
+
+    // 6-Point Star Pattern Inside Striker
+    targetCtx.strokeStyle = overlapping ? "#ff5252" : theme.accent;
+    targetCtx.lineWidth = 1.6;
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3 + pulsePhase * 0.5;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x, y);
+      targetCtx.lineTo(x + Math.cos(a) * r * 0.58, y + Math.sin(a) * r * 0.58);
+      targetCtx.stroke();
+    }
+
+    // Center Gem Dot
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r * 0.22, 0, Math.PI * 2);
+    targetCtx.fillStyle = overlapping ? "#ff1744" : theme.ring;
+    targetCtx.fill();
+
+    // Specular Acrylic Shine
+    targetCtx.beginPath();
+    targetCtx.arc(x - r * 0.22, y - r * 0.22, r * 0.42, 0, Math.PI * 2);
+    targetCtx.fillStyle = "rgba(255, 255, 255, 0.32)";
+    targetCtx.fill();
+
+    targetCtx.restore();
+  }
+
+  function drawAimAndPowerRing() {
+    if (!aim.isDragging || !aim.valid || aim.power <= 0.02) return;
+
+    const p = aim.power;
+    // Smooth color transition: Green -> Yellow -> Red
+    let ringColor = "#00e676";
+    if (p > 0.7) ringColor = "#ff3d57";
+    else if (p > 0.38) ringColor = "#ffd600";
+
+    const expandR = striker.r + 14 + p * 44;
+
+    ctx.save();
+
+    // 1. Expanding Power Circle & Segmented Percentage Ring
+    ctx.beginPath();
+    ctx.arc(striker.x, striker.y, expandR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(striker.x, striker.y, expandR, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2);
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 5;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Power percentage badge near striker
+    const pctText = `${Math.round(p * 100)}%`;
+    ctx.font = "900 12px Segoe UI, sans-serif";
+    ctx.fillStyle = ringColor;
+    ctx.textAlign = "center";
+    ctx.fillText(pctText, striker.x, striker.y + expandR + 15);
+
+    // 2. Forward Trajectory Raycast & Ghost Target Circle
+    const ray = computeTrajectoryRay(striker.x, striker.y, aim.angle);
+
+    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#fff9c4";
+    ctx.beginPath();
+    ctx.moveTo(striker.x, striker.y);
+    ctx.lineTo(ray.endX, ray.endY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (ray.hitPuck) {
+      // Ghost Striker Circle at exact collision point
+      ctx.beginPath();
+      ctx.arc(ray.endX, ray.endY, striker.r, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 215, 0, 0.88)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255, 215, 0, 0.16)";
+      ctx.fill();
+
+      // Target Puck Deflection Direction Arrow
+      const defLen = 42 + p * 48;
+      const tx = ray.hitPuck.x + ray.normalX * defLen;
+      const ty = ray.hitPuck.y + ray.normalY * defLen;
+
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(ray.hitPuck.x, ray.hitPuck.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+
+      // Arrowhead
+      const headAngle = Math.atan2(ray.normalY, ray.normalX);
+      ctx.fillStyle = ringColor;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - 10 * Math.cos(headAngle - 0.45), ty - 10 * Math.sin(headAngle - 0.45));
+      ctx.lineTo(tx - 10 * Math.cos(headAngle + 0.45), ty - 10 * Math.sin(headAngle + 0.45));
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Endpoint dot on cushion
+      ctx.beginPath();
+      ctx.arc(ray.endX, ray.endY, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffd700";
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  /* =========================================================================
+   * 12. MAIN 60 FPS GAME LOOP & LOBBY PREVIEW RENDERER
+   * ========================================================================= */
+  let pulseClock = 0;
+
+  function renderMainGame() {
+    pulseClock += 0.05;
+
+    // 1. Update Game Logic
+    if (gameState === "AIMING") {
+      turnTimeLeft -= 1 / (60 * 22); // 22-second turn timer
+      if (turnTimeLeft <= 0) {
+        addFloatingText("TIME UP!", CENTER, CENTER, "#ff9100");
+        setupTurn(currentTurn === 1 ? 2 : 1, false);
+      }
+    } else if (gameState === "AI_THINKING") {
+      turnTimeLeft -= 1 / (60 * 22);
+      updateAI();
+    } else if (gameState === "SIMULATING") {
+      stepPhysics();
+    }
+
+    drawTurnTimerRings();
+
+    // 2. Draw Cached Wooden Carrom Board
+    ctx.drawImage(cachedBoardCanvas, 0, 0);
+
+    // 3. Draw Pocket Shrink-and-Fade Animations
+    for (let i = droppingPucks.length - 1; i >= 0; i--) {
+      const dp = droppingPucks[i];
+      dp.x += (dp.tx - dp.x) * 0.25;
+      dp.y += (dp.ty - dp.y) * 0.25;
+      dp.r *= 0.86;
+      dp.alpha *= 0.84;
+      if (dp.type === "striker") {
+        drawStriker(ctx, dp.x, dp.y, dp.r, false, pulseClock);
+      } else {
+        drawPuck(ctx, dp.x, dp.y, dp.r, dp.type, dp.alpha);
+      }
+      if (dp.alpha < 0.08 || dp.r < 2) {
+        droppingPucks.splice(i, 1);
+      }
+    }
+
+    // 4. Draw Active Pucks
+    for (const p of pucks) {
+      drawPuck(ctx, p.x, p.y, p.r, p.type, 1);
+    }
+
+    // 5. Draw Aim Trajectory & Power Ring (under/around striker)
+    if (gameState === "AIMING" || gameState === "AI_THINKING") {
+      drawAimAndPowerRing();
+    }
+
+    // 6. Draw Striker
+    if (striker.visible) {
+      drawStriker(ctx, striker.x, striker.y, striker.r, striker.overlapping, pulseClock);
+    }
+
+    // 7. Draw Golden Sparkle Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const pt = particles[i];
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.vx *= 0.94;
+      pt.vy *= 0.94;
+      pt.alpha -= 0.028;
+
+      if (pt.alpha <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = pt.alpha;
+      ctx.fillStyle = pt.color;
+      ctx.shadowColor = pt.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 8. Draw Floating Callout Texts
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+      const ft = floatingTexts[i];
+      ft.y += ft.vy;
+      ft.alpha -= 0.018;
+      if (ft.alpha <= 0) {
+        floatingTexts.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = ft.alpha;
+      ctx.font = "900 22px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 4;
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+
+    // 9. Draw Lobby Glowing Striker Preview
+    renderLobbyPreview();
+
+    requestAnimationFrame(renderMainGame);
+  }
+
+  const lobbyPreviewCanvas = document.getElementById("lobbyPreviewCanvas");
+  const lctx = lobbyPreviewCanvas.getContext("2d");
+
+  function renderLobbyPreview() {
+    if (!document.getElementById("lobbyScreen").classList.contains("active")) return;
+    lctx.clearRect(0, 0, 136, 136);
+
+    // Mini rotating golden aura
+    lctx.save();
+    lctx.translate(68, 68);
+    lctx.rotate(pulseClock * 0.25);
+    lctx.strokeStyle = "rgba(255, 215, 0, 0.35)";
+    lctx.lineWidth = 2;
+    lctx.setLineDash([6, 6]);
+    lctx.beginPath();
+    lctx.arc(0, 0, 52, 0, Math.PI * 2);
+    lctx.stroke();
+    lctx.restore();
+
+    drawStriker(lctx, 68, 68, 34, false, pulseClock);
+  }
+
+  /* =========================================================================
+   * 13. VICTORY MODAL & CONFETTI SYSTEM
+   * ========================================================================= */
+  const confettiCanvas = document.getElementById("confettiCanvas");
+  const cctx = confettiCanvas.getContext("2d");
+  let confettiPieces = [];
+  let confettiActive = false;
+
+  function finishMatch(winnerPlayer) {
+    gameState = "GAME_OVER";
+    sound.playVictoryFanfare();
+
+    const modal = document.getElementById("victoryModal");
+    const titleEl = document.getElementById("victoryTitle");
+    const subEl = document.getElementById("victorySub");
+    const scoreEl = document.getElementById("victoryScoreText");
+    const coinEl = document.getElementById("victoryCoinsText");
+
+    if (gameMode === "PASS_PLAY") {
+      titleEl.textContent = `Player ${winnerPlayer} Wins!`;
+    } else {
+      titleEl.textContent = winnerPlayer === 1 ? "You Win!" : "AI Master Wins!";
+    }
+
+    subEl.textContent = `${document.getElementById("hudModeLabel").textContent} Match Completed`;
+    scoreEl.textContent = `${scores[1]} - ${scores[2]}`;
+
+    const prize = winnerPlayer === 1 ? (gameMode === "CLASSIC" ? 2500 : 1500) : 250;
+    coinEl.textContent = `+${prize.toLocaleString()} C`;
+
+    modal.classList.add("active");
+    startConfetti();
+  }
+
+  function startConfetti() {
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+    confettiPieces = [];
+    const colors = ["#ffd700", "#00e676", "#00e5ff", "#ff4081", "#ffffff"];
+    for (let i = 0; i < 95; i++) {
+      confettiPieces.push({
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * -confettiCanvas.height,
+        w: 7 + Math.random() * 6,
+        h: 10 + Math.random() * 8,
+        vy: 2.2 + Math.random() * 3.8,
+        vx: (Math.random() - 0.5) * 2.2,
+        rot: Math.random() * Math.PI * 2,
+        vrot: (Math.random() - 0.5) * 0.14,
+        color: colors[i % colors.length]
+      });
+    }
+    confettiActive = true;
+    requestAnimationFrame(stepConfetti);
+  }
+
+  function stopConfetti() {
+    confettiActive = false;
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  }
+
+  function stepConfetti() {
+    if (!confettiActive) return;
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    for (const p of confettiPieces) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vrot;
+      if (p.y > confettiCanvas.height + 20) {
+        p.y = -15;
+        p.x = Math.random() * confettiCanvas.width;
+      }
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot);
+      cctx.fillStyle = p.color;
+      cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cctx.restore();
+    }
+    requestAnimationFrame(stepConfetti);
+  }
+
+  /* =========================================================================
+   * 14. UI EVENT BINDINGS & BOOTSTRAP
+   * ========================================================================= */
+  document.querySelectorAll(".mode-card").forEach(card => {
+    card.addEventListener("click", () => {
+      sound.playUIClick();
+      const selectedMode = card.getAttribute("data-mode");
+      startMatch(selectedMode);
+    });
+  });
+
+  document.getElementById("switchStrikerBtn").addEventListener("click", () => {
+    sound.playUIClick();
+    currentStrikerThemeIdx = (currentStrikerThemeIdx + 1) % STRIKER_THEMES.length;
+    document.getElementById("strikerNameText").textContent = STRIKER_THEMES[currentStrikerThemeIdx].name;
+  });
+
+  function updateSoundIcons(isOn) {
+    const icon = isOn ? "🔊" : "🔇";
+    document.getElementById("lobbySoundBtn").textContent = icon;
+    document.getElementById("gameSoundBtn").textContent = icon;
+  }
+
+  document.getElementById("lobbySoundBtn").addEventListener("click", () => {
+    updateSoundIcons(sound.toggle());
+  });
+
+  document.getElementById("gameSoundBtn").addEventListener("click", () => {
+    updateSoundIcons(sound.toggle());
+  });
+
+  function returnToLobby() {
+    sound.playUIClick();
+    stopConfetti();
+    gameState = "IDLE";
+    document.getElementById("victoryModal").classList.remove("active");
+    document.getElementById("gameScreen").classList.remove("active");
+    document.getElementById("lobbyScreen").classList.add("active");
+  }
+
+  document.getElementById("gameHomeBtn").addEventListener("click", returnToLobby);
+  document.getElementById("modalHomeBtn").addEventListener("click", returnToLobby);
+  document.getElementById("rematchBtn").addEventListener("click", () => {
+    sound.playUIClick();
+    startMatch(gameMode);
+  });
+
+  // Build cached procedural board and launch 60 FPS loop
+  buildProceduralBoardCache();
+  updateSliderVisual();
+  requestAnimationFrame(renderMainGame);
+})();
+</script>
+</body>
+</html>
